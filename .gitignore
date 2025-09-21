@@ -1,2 +1,10 @@
-# Ignore local environment variables
+# .gitignore
+
+# Environments
+.venv/
+venv/
 .env
+
+# Python cache
+__pycache__/
+*.pyc
