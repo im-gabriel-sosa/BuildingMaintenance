@@ -1,47 +1,60 @@
 // src/App.jsx
 
-import { useAuth0 } from '@auth0/auth0-react';
+import React from 'react';
+import { createBrowserRouter, RouterProvider, Link, Outlet } from 'react-router-dom';
+import { useAuth0, withAuthenticationRequired } from '@auth0/auth0-react';
 
-function App() {
-  const { 
-    isAuthenticated, 
-    loginWithRedirect, 
-    logout, 
-    user, 
-    isLoading 
-  } = useAuth0();
+import HomePage from './pages/HomePage';
+import HomeownerDashboard from './pages/HomeownerDashboard';
 
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
+// This HOC (Higher-Order Component) protects our dashboard page
+const ProtectedHomeownerDashboard = withAuthenticationRequired(HomeownerDashboard, {
+  onRedirecting: () => <div>Loading...</div>, // Optional: show a loading indicator
+});
 
+// A simple layout component with navigation
+const Layout = () => {
+  const { isAuthenticated, loginWithRedirect, logout } = useAuth0();
   return (
-    <div style={{ padding: '50px', textAlign: 'center' }}>
-      <h1>Property Maintenance Platform</h1>
-      {isAuthenticated ? (
-        <div>
-          <h2>Welcome, {user.name}!</h2>
-          <p>Your email is: {user.email}</p>
-          <button 
-            onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
-            style={{ marginTop: '20px', padding: '10px 20px', cursor: 'pointer' }}
-          >
-            Log Out
-          </button>
+    <div>
+      <nav style={{ padding: '20px', borderBottom: '1px solid #ccc', display: 'flex', gap: '20px', alignItems: 'center' }}>
+        <Link to="/">Home</Link>
+        <Link to="/dashboard">Dashboard</Link>
+        <div style={{ marginLeft: 'auto' }}>
+          {!isAuthenticated ? (
+            <button onClick={() => loginWithRedirect()}>Log In</button>
+          ) : (
+            <button onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}>Log Out</button>
+          )}
         </div>
-      ) : (
-        <div>
-          <p>Please log in to continue.</p>
-          <button 
-            onClick={() => loginWithRedirect()}
-            style={{ marginTop: '20px', padding: '10px 20px', cursor: 'pointer' }}
-          >
-            Log In
-          </button>
-        </div>
-      )}
+      </nav>
+      <main>
+        <Outlet /> {/* Child routes will render here */}
+      </main>
     </div>
   );
+};
+
+// Define the application's routes
+const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <Layout />,
+    children: [
+      {
+        index: true,
+        element: <HomePage />,
+      },
+      {
+        path: 'dashboard',
+        element: <ProtectedHomeownerDashboard />,
+      },
+    ],
+  },
+]);
+
+function App() {
+  return <RouterProvider router={router} />;
 }
 
 export default App;
