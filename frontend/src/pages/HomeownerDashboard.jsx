@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
-import { getRequests, createRequest } from '../services/api';
+import { getRequests, createRequest, updateRequest, deleteRequest } from '../services/api';
 
 const HomeownerDashboard = () => {
   const { user, getAccessTokenSilently } = useAuth0();
@@ -11,6 +11,19 @@ const HomeownerDashboard = () => {
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [editingRequest, setEditingRequest] = useState(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editStatus, setEditStatus] = useState('');
+  const [editImageUrl, setEditImageUrl] = useState('');
+
+  // Status options
+  const statusOptions = [
+    { value: 'open', label: 'Open' },
+    { value: 'in_progress', label: 'In Progress' },
+    { value: 'completed', label: 'Completed' },
+    { value: 'canceled', label: 'Canceled' }
+  ];
 
   // A memoized function to fetch requests
   const fetchRequests = useCallback(async () => {
@@ -20,6 +33,7 @@ const HomeownerDashboard = () => {
       setRequests(data);
     } catch (err) {
       setError('Failed to fetch maintenance requests.');
+      console.error('Fetch error:', err);
     } finally {
       setLoading(false);
     }
@@ -51,6 +65,68 @@ const HomeownerDashboard = () => {
       fetchRequests();
     } catch (err) {
       setError('Failed to create the request.');
+      console.error('Create error:', err);
+    }
+  };
+
+  const handleEdit = (request) => {
+    setEditingRequest(request.id);
+    setEditTitle(request.title);
+    setEditDescription(request.description);
+    setEditStatus(request.status);
+    setEditImageUrl(request.image_url || '');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingRequest(null);
+    setEditTitle('');
+    setEditDescription('');
+    setEditStatus('');
+    setEditImageUrl('');
+  };
+
+  const handleUpdateSubmit = async (e) => {
+    e.preventDefault();
+    if (!editTitle || !editDescription) {
+      alert('Please fill in both title and description.');
+      return;
+    }
+
+    try {
+      const token = await getAccessTokenSilently();
+      const updateData = {
+        title: editTitle,
+        description: editDescription,
+        status: editStatus,
+        image_url: editImageUrl || null,
+      };
+      await updateRequest(editingRequest, updateData, token);
+
+      // Clear edit state and refresh the list
+      setEditingRequest(null);
+      setEditTitle('');
+      setEditDescription('');
+      setEditStatus('');
+      setEditImageUrl('');
+      fetchRequests();
+    } catch (err) {
+      setError('Failed to update the request.');
+      console.error('Update error:', err);
+    }
+  };
+
+  const handleDelete = async (requestId) => {
+    if (!window.confirm('Are you sure you want to delete this request?')) {
+      return;
+    }
+
+    try {
+      const token = await getAccessTokenSilently();
+      await deleteRequest(requestId, token);
+      fetchRequests(); // Refresh the list
+    } catch (err) {
+      setError('Failed to delete the request.');
+      console.error('Delete error:', err);
     }
   };
 
@@ -89,9 +165,103 @@ const HomeownerDashboard = () => {
           <ul style={{ listStyle: 'none', padding: 0 }}>
             {requests.map((req) => (
               <li key={req.id} style={{ border: '1px solid #ddd', padding: '15px', borderRadius: '5px', marginBottom: '10px' }}>
-                <h3 style={{ marginTop: 0 }}>{req.title}</h3>
-                <p>{req.description}</p>
-                <p><small>Status: {req.status}</small></p>
+                {editingRequest === req.id ? (
+                  // Edit form
+                  <div>
+                    <form onSubmit={handleUpdateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <input
+                        type="text"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        style={{ padding: '8px', fontSize: '16px', fontWeight: 'bold' }}
+                      />
+                      <textarea
+                        value={editDescription}
+                        onChange={(e) => setEditDescription(e.target.value)}
+                        style={{ padding: '8px', minHeight: '60px' }}
+                      />
+                      <select
+                        value={editStatus}
+                        onChange={(e) => setEditStatus(e.target.value)}
+                        style={{ padding: '8px' }}
+                      >
+                        {statusOptions.map(option => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="url"
+                        placeholder="Image URL (optional)"
+                        value={editImageUrl}
+                        onChange={(e) => setEditImageUrl(e.target.value)}
+                        style={{ padding: '8px' }}
+                      />
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button type="submit" style={{ padding: '8px 12px', cursor: 'pointer', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px' }}>
+                          Save Changes
+                        </button>
+                        <button type="button" onClick={handleCancelEdit} style={{ padding: '8px 12px', cursor: 'pointer', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px' }}>
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                ) : (
+                  // Display mode
+                  <div>
+                    <h3 style={{ marginTop: 0 }}>{req.title}</h3>
+                    <p>{req.description}</p>
+                    {req.image_url && (
+                      <div style={{ marginBottom: '10px' }}>
+                        <img
+                          src={req.image_url}
+                          alt="Request"
+                          style={{ maxWidth: '300px', maxHeight: '200px', objectFit: 'cover', borderRadius: '4px' }}
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                      </div>
+                    )}
+                    <p><small>Status: <span style={{
+                      fontWeight: 'bold',
+                      color: req.status === 'open' ? '#FFA500' :
+                             req.status === 'completed' ? '#4CAF50' :
+                             req.status === 'in_progress' ? '#2196F3' :
+                             req.status === 'canceled' ? '#f44336' : '#666'
+                    }}>{req.status.replace('_', ' ').toUpperCase()}</span></small></p>
+
+                    {/* Action buttons - available for all requests */}
+                    <div style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
+                      <button
+                        onClick={() => handleEdit(req)}
+                        style={{
+                          padding: '8px 12px',
+                          cursor: 'pointer',
+                          backgroundColor: '#2196F3',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px'
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(req.id)}
+                        style={{
+                          padding: '8px 12px',
+                          cursor: 'pointer',
+                          backgroundColor: '#f44336',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px'
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
