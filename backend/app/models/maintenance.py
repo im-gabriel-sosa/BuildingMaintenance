@@ -16,20 +16,24 @@ class MaintenanceRequest(BaseModel):
     title: str = Field(..., min_length=3, max_length=100)
     description: str = Field(..., min_length=10, max_length=500)
     homeowner_id: str
-    status: str = Field(default=MaintenanceStatus.OPEN)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    status: Optional[str] = Field(default=MaintenanceStatus.OPEN)
+    created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
     image_url: Optional[str] = None
     bids: List[dict] = Field(default=[])
 
-    @validator('status')
+    @validator('status', pre=True, always=True)
     def validate_status(cls, v):
+        # If status is None or empty, set to default
+        if not v:
+            return MaintenanceStatus.OPEN
+
         valid_statuses = [
             MaintenanceStatus.OPEN,
             MaintenanceStatus.IN_PROGRESS,
             MaintenanceStatus.COMPLETED,
             MaintenanceStatus.CANCELED
         ]
-        if v and v not in valid_statuses:
+        if v not in valid_statuses:
             raise ValueError(f'status must be one of {valid_statuses}')
         return v
 
@@ -45,10 +49,22 @@ class MaintenanceRequestOut(MaintenanceRequest):
 
 
 class MaintenanceRequestUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
+    title: Optional[str] = Field(None, min_length=3, max_length=100)
+    description: Optional[str] = Field(None, min_length=10, max_length=500)
     status: Optional[str] = None
     image_url: Optional[str] = None
 
-    # Fix the syntax error - this should be a proper field assignment
-    validate_status = validator('status', allow_reuse=True)(MaintenanceRequest.validate_status)
+    @validator('status', pre=True)
+    def validate_status(cls, v):
+        if v is None:
+            return v
+
+        valid_statuses = [
+            MaintenanceStatus.OPEN,
+            MaintenanceStatus.IN_PROGRESS,
+            MaintenanceStatus.COMPLETED,
+            MaintenanceStatus.CANCELED
+        ]
+        if v not in valid_statuses:
+            raise ValueError(f'status must be one of {valid_statuses}')
+        return v

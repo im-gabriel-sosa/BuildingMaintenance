@@ -1,5 +1,4 @@
 // src/App.jsx
-
 import React from 'react';
 import { createBrowserRouter, RouterProvider, Link, Outlet } from 'react-router-dom';
 import { useAuth0, withAuthenticationRequired } from '@auth0/auth0-react';
@@ -16,8 +15,22 @@ const ProtectedHomeownerDashboard = withAuthenticationRequired(HomeownerDashboar
 const Layout = () => {
   const { isAuthenticated, loginWithRedirect, logout } = useAuth0();
   return (
-    <div>
-      <nav style={{ padding: '20px', borderBottom: '1px solid #ccc', display: 'flex', gap: '20px', alignItems: 'center' }}>
+    <div style={{
+      width: '100vw',
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
+      <nav style={{
+        padding: '20px 40px',
+        borderBottom: '1px solid #ccc',
+        display: 'flex',
+        gap: '20px',
+        alignItems: 'center',
+        width: '100%',
+        boxSizing: 'border-box'
+      }}>
+        <div style={{ fontWeight: 'bold', fontSize: '20px', color: '#2196F3' }}>Properly</div>
         <Link to="/">Home</Link>
         <Link to="/dashboard">Dashboard</Link>
         <div style={{ marginLeft: 'auto' }}>
@@ -28,7 +41,12 @@ const Layout = () => {
           )}
         </div>
       </nav>
-      <main>
+      <main style={{
+        flex: 1,
+        padding: '0 40px',
+        width: '100%',
+        boxSizing: 'border-box'
+      }}>
         <Outlet /> {/* Child routes will render here */}
       </main>
     </div>

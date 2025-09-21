@@ -1,5 +1,4 @@
 // src/pages/HomeownerDashboard.jsx
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { getRequests, createRequest, updateRequest, deleteRequest } from '../services/api';
@@ -44,6 +43,21 @@ const HomeownerDashboard = () => {
     fetchRequests();
   }, [fetchRequests]);
 
+  // DEBUG: Log requests state whenever it changes
+  useEffect(() => {
+    if (requests.length > 0) {
+      console.log('=== REQUESTS STATE DEBUG ===');
+      requests.forEach((req, index) => {
+        console.log(`Request ${index}:`, {
+          id: req.id,
+          idType: typeof req.id,
+          title: req.title,
+          fullObject: req
+        });
+      });
+    }
+  }, [requests]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title || !description) {
@@ -58,7 +72,25 @@ const HomeownerDashboard = () => {
         description,
         homeowner_id: user.sub, // The user's unique ID from Auth0
       };
-      await createRequest(newRequestData, token);
+
+      // DEBUG LOGS:
+      console.log('=== FRONTEND DEBUG ===');
+      console.log('User object:', user);
+      console.log('User.sub:', user.sub);
+      console.log('Title:', title, 'Length:', title.length);
+      console.log('Description:', description, 'Length:', description.length);
+      console.log('Full payload:', JSON.stringify(newRequestData, null, 2));
+      console.log('Token preview:', token.substring(0, 50) + '...');
+
+      const newRequest = await createRequest(newRequestData, token);
+
+      // DEBUG CREATE RESPONSE:
+      console.log('=== CREATE RESPONSE DEBUG ===');
+      console.log('New request returned:', newRequest);
+      console.log('New request ID:', newRequest.id);
+      console.log('ID type:', typeof newRequest.id);
+      console.log('Full new request object:', JSON.stringify(newRequest, null, 2));
+
       // Clear form and refresh the list
       setTitle('');
       setDescription('');
@@ -66,10 +98,17 @@ const HomeownerDashboard = () => {
     } catch (err) {
       setError('Failed to create the request.');
       console.error('Create error:', err);
+      console.error('Error response:', err.response?.data);
+      console.error('Validation details:', err.response?.data?.detail);
     }
   };
 
   const handleEdit = (request) => {
+    console.log('=== EDIT DEBUG ===');
+    console.log('Editing request:', request);
+    console.log('Request ID being edited:', request.id);
+    console.log('Request ID type:', typeof request.id);
+
     setEditingRequest(request.id);
     setEditTitle(request.title);
     setEditDescription(request.description);
@@ -100,8 +139,13 @@ const HomeownerDashboard = () => {
         status: editStatus,
         image_url: editImageUrl || null,
       };
-      await updateRequest(editingRequest, updateData, token);
 
+      console.log('=== UPDATE DEBUG ===');
+      console.log('Updating request ID:', editingRequest);
+      console.log('Update data:', updateData);
+      console.log('Request ID type:', typeof editingRequest);
+
+      await updateRequest(editingRequest, updateData, token);
       // Clear edit state and refresh the list
       setEditingRequest(null);
       setEditTitle('');
@@ -112,6 +156,7 @@ const HomeownerDashboard = () => {
     } catch (err) {
       setError('Failed to update the request.');
       console.error('Update error:', err);
+      console.error('Update error response:', err.response?.data);
     }
   };
 
@@ -121,12 +166,17 @@ const HomeownerDashboard = () => {
     }
 
     try {
+      console.log('=== DELETE DEBUG ===');
+      console.log('Deleting request ID:', requestId);
+      console.log('Request ID type:', typeof requestId);
+
       const token = await getAccessTokenSilently();
       await deleteRequest(requestId, token);
       fetchRequests(); // Refresh the list
     } catch (err) {
       setError('Failed to delete the request.');
       console.error('Delete error:', err);
+      console.error('Delete error response:', err.response?.data);
     }
   };
 
@@ -134,7 +184,7 @@ const HomeownerDashboard = () => {
   if (error) return <div style={{ color: 'red' }}>Error: {error}</div>;
 
   return (
-    <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
+    <div style={{ padding: '20px 0', maxWidth: '800px', margin: '0 auto', width: '100%' }}>
       <h1>My Maintenance Requests</h1>
 
       <div style={{ background: '#f9f9f9', padding: '20px', borderRadius: '8px', marginBottom: '30px' }}>
@@ -230,7 +280,7 @@ const HomeownerDashboard = () => {
                              req.status === 'in_progress' ? '#2196F3' :
                              req.status === 'canceled' ? '#f44336' : '#666'
                     }}>{req.status.replace('_', ' ').toUpperCase()}</span></small></p>
-
+                    <p><small>ID: {req.id} (Debug info)</small></p>
                     {/* Action buttons - available for all requests */}
                     <div style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
                       <button
