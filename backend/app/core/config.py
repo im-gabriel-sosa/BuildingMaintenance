@@ -1,14 +1,14 @@
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # MongoDB
-    mongo_connection_string: str
-    db_name: str = "property_maintenance_db"
+    MONGO_CONNECTION_STRING: str
+    DB_NAME: str = "property_maintenance_db"
 
     # Auth0
-    auth0_domain: str
-    auth0_api_audience: str
-    auth0_algorithms: str
+    AUTH0_DOMAIN: str
+    AUTH0_API_AUDIENCE: str
+    AUTH0_ALGORITHMS: str
 
     class Config:
         env_file = ".env"

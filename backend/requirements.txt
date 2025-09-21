@@ -1,8 +1,6 @@
+# requirements.txt
 fastapi
-uvicorn[standard]
+uvicorn
 python-dotenv
 motor
-PyMongo
-python-jose[cryptography]
-passlib[bcrypt]
-Auth0-Python
+PyJWT[crypto]

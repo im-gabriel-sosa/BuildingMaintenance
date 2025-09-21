@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth0 Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div id="root"></div>
+    
+    <!-- Load React and ReactDOM first -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Load Auth0 React SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@auth0/auth0-react@2.2.4/dist/auth0-react.min.js"></script>
+    
+    <!-- Load Babel for JSX transformation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <script type="text/babel">
+        // Add console log to check if script is running
+        console.log('Script starting...');
+        
+        // Check if all required libraries are loaded
+        console.log('React available:', typeof React !== 'undefined');
+        console.log('ReactDOM available:', typeof ReactDOM !== 'undefined');
+        console.log('Auth0 available:', typeof reactAuth0 !== 'undefined');
+
+        const { useState, useEffect } = React;
+        const { Auth0Provider, useAuth0 } = reactAuth0;
+
+        const MainApp = () => {
+            const {
+                isAuthenticated,
+                user,
+                loginWithRedirect,
+                logout,
+                getAccessTokenSilently,
+            } = useAuth0();
+        
+            const [accessToken, setAccessToken] = useState(null);
+            const [tokenLoading, setTokenLoading] = useState(false);
+            const [tokenError, setTokenError] = useState(null);
+
+            // Get access token when user is authenticated
+            useEffect(() => {
+                if (isAuthenticated) {
+                    setTokenLoading(true);
+                    getAccessTokenSilently({
+                        authorizationParams: {
+                            audience: AUTH0_AUDIENCE,
+                        },
+                    })
+                    .then(token => {
+                        console.log('JWT Access Token:', token); // Print token to console
+                        setAccessToken(token);
+                        setTokenLoading(false);
+                    })
+                    .catch(error => {
+                        console.error('Error getting access token:', error);
+                        setTokenError(error);
+                        setTokenLoading(false);
+                    });
+                }
+            }, [isAuthenticated, getAccessTokenSilently]);
+
+            return (
+                <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
+                    <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-2xl text-center">
+                        <h1 className="text-3xl font-bold mb-6 text-gray-800">Property Maintenance Platform</h1>
+                        {!isAuthenticated ? (
+                            <div className="space-y-4">
+                                <p className="text-gray-600">Please log in to continue.</p>
+                                <button
+                                    onClick={() => loginWithRedirect()}
+                                    className="w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-colors"
+                                >
+                                    Log In
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="space-y-6">
+                                <h2 className="text-xl font-semibold text-gray-700">
+                                    Welcome, {user?.name || user?.email || 'User'}!
+                                </h2>
+                                {accessToken ? (
+                                    <div className="bg-gray-50 p-4 rounded-lg shadow-inner">
+                                        <p className="font-medium text-gray-900 mb-2">Your JWT Access Token:</p>
+                                        <div className="bg-white p-2 rounded border text-left">
+                                            <code className="text-xs text-gray-600 break-all select-all">
+                                                {accessToken}
+                                            </code>
+                                        </div>
+                                    </div>
+                                ) : tokenError ? (
+                                    <p className="text-red-500">Error loading token: {tokenError.message}</p>
+                                ) : tokenLoading ? (
+                                    <p className="text-gray-500">Loading token...</p>
+                                ) : null}
+                                <button
+                                    onClick={() => logout({ 
+                                        logoutParams: { 
+                                            returnTo: window.location.origin 
+                                        } 
+                                    })}
+                                    className="w-full px-6 py-3 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition-colors"
+                                >
+                                    Log Out
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+        
+        // Replace with your actual Auth0 credentials
+const AUTH0_DOMAIN = 'dev-5sxkcuwmv28osx0h.us.auth0.com';
+const AUTH0_CLIENT_ID = 'pImKWWsPIePIaGUi5vi0NAEayHJI11ji';  // Replace with your real client ID
+const AUTH0_AUDIENCE = 'https://property-maintenance-api';
+        
+        const container = document.getElementById('root');
+        console.log('Container found:', container);
+        
+        const root = ReactDOM.createRoot(container);
+        console.log('Root created:', root);
+        
+        root.render(
+            <Auth0Provider
+                domain={AUTH0_DOMAIN}
+                clientId={AUTH0_CLIENT_ID}
+                authorizationParams={{
+                    redirect_uri: 'http://127.0.0.1:5500/frontend/src/index.html',
+                    audience: AUTH0_AUDIENCE,
+                    scope: 'openid profile email'
+                }}
+            >
+                <MainApp />
+            </Auth0Provider>
+        );
+    </script>
+</body>
+</html>
